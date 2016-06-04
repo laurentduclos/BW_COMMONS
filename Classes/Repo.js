@@ -3,6 +3,7 @@ import {ObjectID} from 'mongodb';
 import {ValidationError} from '../errors';
 import Promise from 'bluebird';
 import { utils as fp } from 'jsfp';
+import indicative from 'indicative';
 
 class Repo {
   /**
@@ -173,8 +174,13 @@ class Repo {
     // Add unique validation rule
     indicative.extend('or', or.bind(this))
 
-    // Add unique validation rule
-    indicative.extend('uniquePhone', uniquePhone.bind(this))
+    // Add custome validaiton method defined on repos
+    if (this.customValidationMethod) {
+      this.customValidationMethod.map(method =>
+        indicative.extend(this.constructor.name || this.name, method.bind(this))
+      )
+    }
+
 
     // Add unique validation rule
     indicative.extend('unique', unique.bind(this))
