@@ -4,154 +4,135 @@ import {ValidationError} from '../errors';
 import Promise from 'bluebird';
 import { utils as fp } from 'jsfp';
 import indicative from 'indicative';
+import {RepoMalformedError} from '../errors';
 
+/**
+ * Base class for all repositories that need access mongoDB.
+ *
+ * use:
+ *
+ * class MyRepo extend Repo {
+ *   ...
+ * }
+ *
+ */
 class Repo {
   /**
-   * [constructor description]
+   * Expect to receive the MongoDB connection end point as well as the collection name
+   *
    * @param  {function} getMongoPool   Retreived the mongo connection
    * @param  {string} collectionName Name of the mongo collection
+   *
+   *
    */
   constructor(getMongoPool, collectionName) {
+    // Make sure that we have the mongoDB pool and the collction name
+    if ( ! getMongoPool ) {
+      throw new RepoMalformedError('Missing the mongoDB object');
+    }
+
+    if ( ! collectionName ) {
+      throw new RepoMalformedError('Missing the collection name for this repo');
+    }
+
+    // Save those references
     this.collectionName = collectionName;
     this.getMongoPool = getMongoPool;
     this.errors = [];
   }
 
+  /**
+   * Return a MongoDB NodeJS Connection Pool
+   *
+   * Learn more about pool here http://blog.mlab.com/2013/11/deep-dive-into-connection-pooling/
+   *
+   * @return {MongoDB Pool}
+   *
+   */
   get db() {
     return this.getMongoPool();
   }
 
+  /**
+   * Return a mongoDB collection based on this.collectionName
+   *
+   * @return {Promise}
+   *
+   */
   get collection() {
     return this.getMongoPool().collection(this.collectionName);
   }
 
+  /**
+   * Get all documents from collection
+   *
+   * @return {Promise}
+   */
   all() {
     return this.collection.find({}).toArray();
   }
 
+  /**
+   * Count all in collection
+   *
+   * @return {Promise}
+   */
   count() {
     return this.collection.count();
   }
 
+  /**
+   * Rerteive the first item that match a query
+   *
+   * @param  {Object} MongoDB query
+   * @return {Promise}
+   */
   findOne(query) {
     return this.collection.findOne(query);
   }
 
+  /**
+   * Remove all items that match the query
+   *
+   * @param  {Object} MongoDB query
+   * @return {Promise}
+   */
   remove(query) {
     query = query || {};
     return this.collection.remove(query);
   }
 
   /**
-   * [getProjectionObject description]
-   * @return Object
+   * Add one document to the collection
+   *
+   * @param  {Object} data: Document to be added
+   * @param  {Boolean} noGuard: Wehter or not guarded field (aka. mass assignement protection) should be lifted
+   * @return {Promise}
    */
-  getProjectionObject() {
-    // return this.fields.reduce((acc, field )=> {
-    //   if(this.hidden && this.hidden.indexOf(field) === -1 ) {
-    //     acc[field] = 1;
-    //     return acc;
-    //   }
-    //   return acc
-    // }, {});
-
-    return this.hidden.reduce((acc, field) => {
-      acc[field] = 0;
-      return acc;
-    }, {})
-  }
-
-  findById(id) {
-    const idO = new ObjectID(id);
-    return this.collection.findOne({_id: idO}, this.getProjectionObject());
-  }
-
-  getField(id, fieldName) {
-    const idO = new ObjectID(id);
-    return this.collection.findOne({_id: idO}, {[fieldName]: 1, "_id": 0});
-  }
-
-  pushToArray( query, value, fieldName, updateTime = true ) {
-    return this._pushToArray(this.collection, query, value, fieldName, updateTime)
-  }
-
-  _pushToArray( collection, query, value, fieldName, updateTime = false) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
-    const data = {
-      $push: { [fieldName]: value },
-      $currentDate: { updated_at: updateTime }
-    }
-    return collection.findAndModify(query, [['_id',1]], data, {new:true});
-  }
-
-  pullFromArray( query, removalQuery, fieldName ) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
-    const data = {
-      $pull: { [fieldName]: removalQuery },
-      $currentDate: { updated_at: true }
-    }
-    return this.collection.findAndModify(query, [['_id',1]], data, {new:true});
-  }
-
-  removeExperience( query, experienceID ) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
-    const data = {
-      $pull: { experiences: { id: experienceID} },
-      $currentDate: { updated_at: true }
-    }
-    return this.collection.findAndModify(query, [['_id',1]], data, {new:true});
-    //return this.collection.update(query, repalce);
-  }
-
   insert(data, noGuard) {
     return this._insert(this.collection, data, false, noGuard);
   }
 
-  _insert(collection, data, fieldsOveride, noGuard) {
-    const fields = fieldsOveride ? fieldsOveride : this.fields;
-
-    let guarded = noGuard ? data : fp.filtero((v, k) => {
-      return fields.indexOf(k) > -1
-    }, data);
-
-    if (Object.keys(guarded).length === 0)
-      return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
-
-    return collection.insert(guarded)
-      .then((res) => new Promise ((resolve, reject) => {
-        if (res.ops && res.ops[0] && res.ops[0]._id ) {
-          return resolve(res.ops[0])
-        }
-        else {
-          return reject('Response could not be parsed');
-        }
-      })
-    )
-  }
-
+  /**
+   * Update all documents that match the query with the replace data
+   *
+   * @param  {Object} query: MongoDB query object
+   * @param  {Object} replace: Data to replace document with
+   * @param  {Boolean} noGuard: Wehter or not guarded field (aka. mass assignement protection) should be lifted
+   * @param {Boolean} updateTime: Should updated_at field refresh
+   * @return {Promise}
+   */
   update(query, replace, updateTime = true, noGard) {
     return this._update(this.collection, query, replace, updateTime, noGard?[]:false );
   }
 
-  _update(collection, query, replace, updateTime = true, fieldsOveride ) {
-    const fields = fieldsOveride ? fieldsOveride : this.fields;
-    let guarded = fp.filtero((v, k) => {
-      return fields.indexOf(k) > -1
-    }, replace);
-    // console.log(query, replace)
-    // if (Object.keys(guarded).length === 0)
-    //   return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
-
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
-
-    updateTime && delete(replace.updated_at);
-    replace = {
-      $set: replace,
-      $currentDate: { updated_at: updateTime }
-    }
-    return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
-  }
-
+  /**
+   * Unset a field form document
+   *
+   * @param  {Object} query: MongoDB query object
+   * @param  {String} field: Field name
+   * @return {Promise}
+   */
   unset(query, field) {
     query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
     replace = {
@@ -160,6 +141,16 @@ class Repo {
     return this.collection.findAndModify(query, replace);
   }
 
+
+  /**
+   * Update all documents that match the query with the replace data
+   *
+   * @param  {Object} query: MongoDB query object
+   * @param  {Object} replace: Data to replace document with
+   * @param  {Boolean} noGuard: Wehter or not guarded field (aka. mass assignement protection) should be lifted
+   * @param {Boolean} updateTime: Should updated_at field refresh
+   * @return {Promise}
+   */
   fullUpdate(query, replace, updateTime = true) {
     query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
     replace = {
@@ -170,7 +161,92 @@ class Repo {
   }
 
 
-  async validate(data, exclude = [], rulesOveride) {
+  /**
+   * Create a mongoDB projection object based on the `hidden` fields property
+   *
+   * So in order to "hide" some field from the JSON response on a repository
+   *
+   * just make sure to add them to the `hidden` property array
+   *
+   * @return Object
+   */
+  getProjectionObject() {
+    return this.hidden.reduce((acc, field) => {
+      acc[field] = 0;
+      return acc;
+    }, {})
+  }
+
+  /**
+   * Retreive one item in the colleciton based on
+   * it's mongodDB ObjectID
+   *
+   * @param  {[type]} id [description]
+   * @return {[type]}    [description]
+   */
+  findById(id) {
+    const idO = new ObjectID(id);
+    return this.collection.findOne({_id: idO}, this.getProjectionObject());
+  }
+
+  /**
+   * Only get a scpecific field from the first document
+   *
+   * that matches the query object
+   *
+   * @param  {string} id: Will be conversted to ObjectID
+   * @param {string} fieldName: The fieldname that you want to retreive
+   * @return {Promise}
+   */
+  getField(id, fieldName) {
+    const idO = new ObjectID(id);
+    return this.collection.findOne({_id: idO}, {[fieldName]: 1, "_id": 0});
+  }
+
+  /**
+   * Add one element to the array field of the first
+   *
+   * document that match the query
+   *
+   * @param  {Object}  query: The mongoDB query
+   * @param  {String, Object, Int}  value: The value to be added to the array
+   * @param  {String}  fieldName: The array field name
+   * @param  {Boolean} updateTime: Should the document updated_at time refresh
+   * @return {Promise}
+   */
+  pushToArray( query, value, fieldName, updateTime = true ) {
+    return this._pushToArray(this.collection, query, value, fieldName, updateTime)
+  }
+
+
+  /**
+   * Remove on element form the specified array field on the first document matched
+   *
+   * @param  {Object}  query: The mongoDB query
+   * @param  {Object}  removalQuery: The mongoDB query
+   * @param  {String}  fieldName: The array field name
+   * @return {Promise}
+   */
+  pullFromArray( query, removalQuery, fieldName ) {
+    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    const data = {
+      $pull: { [fieldName]: removalQuery },
+      $currentDate: { updated_at: true }
+    }
+    return this.collection.findAndModify(query, [['_id',1]], data, {new:true});
+  }
+
+
+  /**
+   * Validation method based on indicative NodeJS validation library
+   * http://indicative.adonisjs.com/
+   *
+   * @param  {[type]} data         [description]
+   * @param  {Array}  exclude      [description]
+   * @param  {[type]} rulesOveride [description]
+   * @return {[type]}              [description]
+   */
+  validate(data, exclude = [], rulesOveride) {
     // Add unique validation rule
     indicative.extend('or', or.bind(this))
 
@@ -180,7 +256,6 @@ class Repo {
         indicative.extend(this.constructor.name || this.name, method.bind(this))
       )
     }
-
 
     // Add unique validation rule
     indicative.extend('unique', unique.bind(this))
@@ -217,11 +292,81 @@ class Repo {
   getErrors() {
     return this.formatErrors();
   }
+
+  /**
+   * Insert with more control
+   * @param  {MongoCollection} collection    Can specify a colleciton on which to insert the data
+   * @param  {Object} data          [description]
+   * @param  {Array} fieldsOveride  When specifiying a collection, the `fields` property of the repo might not be relevant, so it can be overiden here
+   * @param  {[type]} noGuard       [description]
+   * @return {[type]}               [description]
+   *
+   */
+  _insert(collection, data, fieldsOveride, noGuard) {
+    const fields = fieldsOveride ? fieldsOveride : this.fields;
+
+    let guarded = noGuard ? data : fp.filtero((v, k) => {
+      return fields.indexOf(k) > -1
+    }, data);
+
+    if (Object.keys(guarded).length === 0)
+      return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
+
+    return collection.insert(guarded)
+      .then((res) => new Promise ((resolve, reject) => {
+        if (res.ops && res.ops[0] && res.ops[0]._id ) {
+          return resolve(res.ops[0])
+        }
+        else {
+          return reject('Response could not be parsed');
+        }
+      })
+    )
+  }
+
+
+  _pushToArray( collection, query, value, fieldName, updateTime = false) {
+    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    const data = {
+      $push: { [fieldName]: value },
+      $currentDate: { updated_at: updateTime }
+    }
+    return collection.findAndModify(query, [['_id',1]], data, {new:true});
+  }
+
+
+  _update(collection, query, replace, updateTime = true, fieldsOveride ) {
+    const fields = fieldsOveride ? fieldsOveride : this.fields;
+    let guarded = fp.filtero((v, k) => {
+      return fields.indexOf(k) > -1
+    }, replace);
+    // console.log(query, replace)
+    // if (Object.keys(guarded).length === 0)
+    //   return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
+
+    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+
+    updateTime && delete(replace.updated_at);
+    replace = {
+      $set: replace,
+      $currentDate: { updated_at: updateTime }
+    }
+    return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
+  }
 }
 
 /**
- * Existance check validator for
+ * Existance check validator indicative:
  * http://indicative.adonisjs.com/docs/node-validation-rules
+ *
+ * Checks wether or not a document with give field already exist on the collection
+ *
+ * @param  {[type]} data    [description]
+ * @param  {[type]} field   [description]
+ * @param  {[type]} message [description]
+ * @param  {[type]} args    [description]
+ * @param  {[type]} get     [description]
+ * @return {[type]}         [description]
  */
 var unique = async function (data, field, message, args, get) {
   return new Promise ((resolve, reject) =>  {
@@ -255,8 +400,17 @@ var unique = async function (data, field, message, args, get) {
 }
 
 /**
- * Or Existance validator
+ * Existance check validator indicative:
  * http://indicative.adonisjs.com/docs/node-validation-rules
+ *
+ * Checks wether or not a document with give field already exist on the collection
+ *
+ * @param  {[type]} data    [description]
+ * @param  {[type]} field   [description]
+ * @param  {[type]} message [description]
+ * @param  {[type]} args    [description]
+ * @param  {[type]} get     [description]
+ * @return {[type]}         [description]
  */
 var or = async function (data, field, message, args, get) {
   return new Promise ((resolve, reject) =>  {
