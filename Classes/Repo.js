@@ -1,10 +1,18 @@
 'use strict';
-import {ObjectID} from 'mongodb';
-import {ValidationError} from '../errors';
+import {
+  ObjectID
+} from 'mongodb';
+import {
+  ValidationError
+} from '../errors';
 import Promise from 'bluebird';
-import { utils as fp } from 'jsfp';
+import {
+  utils as fp
+} from 'jsfp';
 import indicative from 'indicative';
-import {RepoMalformedError} from '../errors';
+import {
+  RepoMalformedError
+} from '../errors';
 
 /**
  * Base class for all repositories that need access mongoDB.
@@ -27,11 +35,11 @@ class Repo {
    */
   constructor(getMongoPool, collectionName) {
     // Make sure that we have the mongoDB pool and the collction name
-    if ( ! getMongoPool ) {
+    if (!getMongoPool) {
       throw new RepoMalformedError('Missing the mongoDB object');
     }
 
-    if ( ! collectionName ) {
+    if (!collectionName) {
       throw new RepoMalformedError('Missing the collection name for this repo');
     }
 
@@ -109,9 +117,11 @@ class Repo {
    * @param  {String} Document ID
    * @return {Promise}
    */
-  removeByID(ID) {
+  removeByID(ID, justOne = true) {
     const idO = new ObjectID(ID);
-    return this._remove({_id: idO}, justOne);
+    return this._remove(this.collection, {
+      _id: idO
+    }, justOne);
   }
 
   /**
@@ -135,7 +145,7 @@ class Repo {
    * @return {Promise}
    */
   update(query, replace, updateTime = true, noGard) {
-    return this._update(this.collection, query, replace, updateTime, noGard?[]:false );
+    return this._update(this.collection, query, replace, updateTime, noGard ? [] : false);
   }
 
   /**
@@ -146,9 +156,13 @@ class Repo {
    * @return {Promise}
    */
   unset(query, field) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = typeof query == 'object' ? query : {
+      '_id': new ObjectID(query)
+    };
     replace = {
-      $unser: { [field]: "" }
+      $unser: {
+        [field]: ""
+      }
     }
     return this.collection.findAndModify(query, replace);
   }
@@ -164,10 +178,14 @@ class Repo {
    * @return {Promise}
    */
   fullUpdate(query, replace, updateTime = true) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = typeof query == 'object' ? query : {
+      '_id': new ObjectID(query)
+    };
     replace = {
       replace,
-      $currentDate: { updated_at: updateTime }
+      $currentDate: {
+        updated_at: updateTime
+      }
     }
     return this.collection.findAndModify(query, replace);
   }
@@ -198,7 +216,9 @@ class Repo {
    */
   findById(id) {
     const idO = new ObjectID(id);
-    return this.collection.findOne({_id: idO}, this.getProjectionObject());
+    return this.collection.findOne({
+      _id: idO
+    }, this.getProjectionObject());
   }
 
   /**
@@ -212,7 +232,12 @@ class Repo {
    */
   getField(id, fieldName) {
     const idO = new ObjectID(id);
-    return this.collection.findOne({_id: idO}, {[fieldName]: 1, "_id": 0});
+    return this.collection.findOne({
+      _id: idO
+    }, {
+      [fieldName]: 1,
+      "_id": 0
+    });
   }
 
   /**
@@ -226,7 +251,7 @@ class Repo {
    * @param  {Boolean} updateTime: Should the document updated_at time refresh
    * @return {Promise}
    */
-  pushToArray( query, value, fieldName, updateTime = true ) {
+  pushToArray(query, value, fieldName, updateTime = true) {
     return this._pushToArray(this.collection, query, value, fieldName, updateTime)
   }
 
@@ -239,13 +264,23 @@ class Repo {
    * @param  {String}  fieldName: The array field name
    * @return {Promise}
    */
-  pullFromArray( query, removalQuery, fieldName ) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+  pullFromArray(query, removalQuery, fieldName) {
+    query = typeof query == 'object' ? query : {
+      '_id': new ObjectID(query)
+    };
     const data = {
-      $pull: { [fieldName]: removalQuery },
-      $currentDate: { updated_at: true }
+      $pull: {
+        [fieldName]: removalQuery
+      },
+      $currentDate: {
+        updated_at: true
+      }
     }
-    return this.collection.findAndModify(query, [['_id',1]], data, {new:true});
+    return this.collection.findAndModify(query, [
+      ['_id', 1]
+    ], data, {
+      new: true
+    });
   }
 
 
@@ -283,7 +318,10 @@ class Repo {
 
     return indicative
       .validateAll(data, rules)
-      .then(() => { console.log('passed'); return true})
+      .then(() => {
+        console.log('passed');
+        return true
+      })
       .catch((errors) => {
         this.__errors = errors;
         const error = new ValidationError("notifications.validation_failed");
@@ -325,15 +363,13 @@ class Repo {
       return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
 
     return collection.insert(guarded)
-      .then((res) => new Promise ((resolve, reject) => {
-        if (res.ops && res.ops[0] && res.ops[0]._id ) {
+      .then((res) => new Promise((resolve, reject) => {
+        if (res.ops && res.ops[0] && res.ops[0]._id) {
           return resolve(res.ops[0])
-        }
-        else {
+        } else {
           return reject('Response could not be parsed');
         }
-      })
-    )
+      }))
   }
 
   /**
@@ -346,22 +382,34 @@ class Repo {
    *
    */
   _remove(collection, query, justOne = false) {
-    const options = { justOne };
+    const options = {
+      justOne
+    };
     return collection.remove(query, options);
   }
 
 
-  _pushToArray( collection, query, value, fieldName, updateTime = false) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+  _pushToArray(collection, query, value, fieldName, updateTime = false) {
+    query = typeof query == 'object' ? query : {
+      '_id': new ObjectID(query)
+    };
     const data = {
-      $push: { [fieldName]: value },
-      $currentDate: { updated_at: updateTime }
+      $push: {
+        [fieldName]: value
+      },
+      $currentDate: {
+        updated_at: updateTime
+      }
     }
-    return collection.findAndModify(query, [['_id',1]], data, {new:true});
+    return collection.findAndModify(query, [
+      ['_id', 1]
+    ], data, {
+      new: true
+    });
   }
 
 
-  _update(collection, query, replace, updateTime = true, fieldsOveride ) {
+  _update(collection, query, replace, updateTime = true, fieldsOveride) {
     const fields = fieldsOveride ? fieldsOveride : this.fields;
     let guarded = fp.filtero((v, k) => {
       return fields.indexOf(k) > -1
@@ -370,14 +418,23 @@ class Repo {
     // if (Object.keys(guarded).length === 0)
     //   return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
 
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = typeof query == 'object' ? query : {
+      '_id': new ObjectID(query)
+    };
 
     updateTime && delete(replace.updated_at);
     replace = {
       $set: replace,
-      $currentDate: { updated_at: updateTime }
+      $currentDate: {
+        updated_at: updateTime
+      }
     }
-    return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
+    return collection.findAndModify(query, [
+      ['_id', 1]
+    ], replace, {
+      upsert: true,
+      new: true
+    });
   }
 }
 
@@ -394,18 +451,20 @@ class Repo {
  * @param  {[type]} get     [description]
  * @return {[type]}         [description]
  */
-var unique = async function (data, field, message, args, get) {
-  return new Promise ((resolve, reject) =>  {
+var unique = async function(data, field, message, args, get) {
+  return new Promise((resolve, reject) => {
     let value = get(data, field);
 
-    if (! field) throw new error('No field was specified for unique checks');
-    if (! value) reject(`${field} is required`);
+    if (!field) throw new error('No field was specified for unique checks');
+    if (!value) reject(`${field} is required`);
 
 
     // if args is we need to change collection
     const collec = args[0] ? this.db.collection(args[0]) : this.collection;
 
-    return collec.findOne({[field]: value})
+    return collec.findOne({
+        [field]: value
+      })
       .then(res => {
 
         if (res === null) {
@@ -413,7 +472,7 @@ var unique = async function (data, field, message, args, get) {
         }
 
         if (res._id) {
-          value = value.number|| value;
+          value = value.number || value;
           return reject(`${value} is already in use`)
         }
 
@@ -438,11 +497,11 @@ var unique = async function (data, field, message, args, get) {
  * @param  {[type]} get     [description]
  * @return {[type]}         [description]
  */
-var or = async function (data, field, message, args, get) {
-  return new Promise ((resolve, reject) =>  {
+var or = async function(data, field, message, args, get) {
+  return new Promise((resolve, reject) => {
     let value = get(data, field);
 
-    if (! field) throw new error('No field was specified for unique checks');
+    if (!field) throw new error('No field was specified for unique checks');
 
     // if args is specified then check if present on data
     const orField = args.length ? get(data, args[0]) : false;
