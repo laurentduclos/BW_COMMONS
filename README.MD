@@ -19,7 +19,7 @@ If a change need to be made on this repo. You need:
 
 - Clone this repo and make the modifications
 - Save and push your modifications
-- run: `git subtree pull —prefix=bw_commons/ —squash bw_commons master`
+- run: `git subtree pull bw_commons master —prefix=bw_commons/`
 
 
 @TODO
