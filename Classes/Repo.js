@@ -97,9 +97,21 @@ class Repo {
    * @param  {Object} MongoDB query
    * @return {Promise}
    */
-  remove(query) {
+  remove(query, justOne) {
     query = query || {};
-    return this.collection.remove(query);
+    return this._remove(query, justOne);
+  }
+
+
+  /**
+   * Remove an Item from it's ID
+   *
+   * @param  {String} Document ID
+   * @return {Promise}
+   */
+  removeByID(ID) {
+    const idO = new ObjectID(ID);
+    return this._remove({_id: idO}, justOne);
   }
 
   /**
@@ -322,6 +334,20 @@ class Repo {
         }
       })
     )
+  }
+
+  /**
+   * Delete document that match the query
+   *
+   * @param  {MongoCollection} collection: Can specify a colleciton on which to insert the data
+   * @param  {Object}  query: The mongoDB query
+   * @param  {Boolean} justOne:   Should we delete only one item
+   * @return {Promise}
+   *
+   */
+  _remove(collection, query, justOne = false) {
+    const options = { justOne };
+    return collection.remove(query, options);
   }
 
 
