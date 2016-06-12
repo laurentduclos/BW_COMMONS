@@ -12,18 +12,13 @@ AWS.config.update({
 
 const Bucket = 'bw-uploads-dev';
 
-// var params = {
-//   Bucket: 'bw-uploads-dev', /* required */
-//   Key: 'test', /* required */
-//   PartNumber: 0, /* required */
-//   UploadId: 'uploadId', /* required */
-//   Body: new Buffer(file),
-// };
-// s3.uploadPart(params, function(err, data) {
-//   if (err) console.log(err, err.stack); // an error occurred
-//   else     console.log(data);           // successful response
-// });
-
+/**
+ * Send a file to s3 bucket
+ *
+ * @param  {Stream} file: the file to be uploaded
+ * @param  {String} path: the full path within the bucket: i.e.: boats/some_boat_id/filename.ext
+ * @return {Promise}
+ */
 export const upload = function(file, path = "") {
   log('uploading to S3:', file.filename)
   var s3obj = new AWS.S3({params: {Bucket, Key: path}});
@@ -42,7 +37,13 @@ export const upload = function(file, path = "") {
     })
 }
 
-
+/**
+ * remove a file from a s3 bucket
+ *
+ * @param  {String} path: the full path within the bucket: i.e.: boats/some_boat_id/filename.ext
+ * @param {Function} next: callback function to be called once the deleting is successfull
+ * @return {Promise}
+ */
 export const deleteObject = function(path, next) {
   var s3obj = new AWS.S3();
   let Delete = {};
@@ -56,6 +57,16 @@ export const deleteObject = function(path, next) {
   })
 }
 
+/**
+ * remove a whole directory from a s3 bucket
+ *
+ * i.e. boats/some_id/pictures/ => remove all pictures
+ *
+ * @param  {String} path: the full path within the bucket: i.e.: boats/some_boat_id/filename.ext
+ * @param {Function} next: callback function to be called once the deleting is successfull
+ * @param {Function} errCb: error callback function to be called once the deleting failled
+ * @return {Promise}
+ */
 export const deleteDirectory = function(path, next, errCb) {
   if (!path) throw new Error('No path was specified');
   var s3obj = new AWS.S3();
@@ -76,7 +87,17 @@ export const deleteDirectory = function(path, next, errCb) {
   });
 }
 
-
+/**
+ * remove a whole directory from one path to an other
+ *
+ * i.e. tmp/some_id/pictures/ => boats/some_id/pictures/
+ *
+ * @param  {String} from: the full path of the directory. i.e.: tmp/some_id/pictures
+ * @param  {String} to: the full path of the NEW directory. i.e.: boats/some_id/pictures
+ * @param {Function} next: callback function to be called once the deleting is successfull
+ * @param {Function} errCb: error callback function to be called once the deleting failled
+ * @return {Promise}
+ */
 export const moveDirectory = function(from, to, next, errCb) {
   if (!from) throw new Error('No path was specified');
   var s3obj = new AWS.S3();
