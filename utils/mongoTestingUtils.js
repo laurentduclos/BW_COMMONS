@@ -1,4 +1,4 @@
-import {mongoInit, mongoClose} from '../bw_commons/services/mongoDBConnector';
+import {mongoInit, mongoClose} from '../services/mongoDBConnector';
 import migrate from 'migrate';
 const set = migrate.load('migrations/.migrate-tests', 'migrations');
 
