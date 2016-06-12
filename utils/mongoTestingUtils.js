@@ -22,13 +22,12 @@ export function cleanupMongo(done) {
  * Typically this is used in the beforeEach hook
  *
  * Example use:
+ *
  * beforeEach(function(done) {
- *   setAndPrepareCollections(['todos'], async () =>{
- *     // After collection is emptied, Seed new data
- *     getMongoPool().collection('todos').insertOne(todoStub).then(res => {
- *       done()
- *     });
- *   });
+ *   setAndPrepareCollections(['todos'], () =>
+ *     // Here the callback method SEED new data
+ *     getMongoPool().collection('todos').insertOne(todoStub).then(res=>done())
+ *   );
  * });
  *
  *
@@ -36,13 +35,12 @@ export function cleanupMongo(done) {
  * @param  {Function} cb: Callback function that will be called after the DB has been setup
  * @return {Promise}
  */
-export function setAndPrepareCollections(collections, cb) {
+export  function setAndPrepareCollections(collections, cb) {
   mongoInit().then((db) => {
     const deletes = collections.map((collection) => {
       return db.collection(collection).remove({});
     });
-    return Promise.all(deletes).then(function(err, res) {
-      db.collection('users').insert(seedUserData);
+    Promise.all(deletes).then(function(err, res) {
       cb()
     });
   });
