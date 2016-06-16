@@ -21,6 +21,16 @@ If a change need to be made on this repo. You need:
 - Save and push your modifications
 - run: `git subtree pull bw_commons master —prefix=bw_commons/`
 
+### Tests
+
+#### OSSManager
+
+You could run test with
+
+```
+npm install mocha sinon chai babel-register ali-oss
+OSS_ACCESS_KEY_ID=[key_id] OSS_ACCESS_KEY_SECRET=[key_secret] OSS_REGION=[region] OSS_BUCKET=[bucket_name] mocha --compilers js:babel-register _tests/Classes/OSSManager.specs.js
+```
 
 @TODO
 
