@@ -21,7 +21,6 @@ If a change need to be made on this repo. You need:
 - Save and push your modifications
 - run: `git subtree pull bw_commons master —prefix=bw_commons/`
 
-
 ### Tests
 
 #### OSSManager
