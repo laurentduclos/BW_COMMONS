@@ -69,7 +69,7 @@ class Repo {
    * @return {Promise}
    */
   all() {
-    return this.collection.find({}).toArray();
+    return this.collection.find({}, this.getHiddenProjectionObject()).toArray();
   }
 
   /**
@@ -80,6 +80,17 @@ class Repo {
   count() {
     return this.collection.count();
   }
+
+
+  /**
+   * Find documents that match query
+   *
+   * @return {Promise => cursor }
+   */
+  find(query) {
+    return this._find(this.collection, query);
+  }
+
 
   /**
    * Rerteive the first item that match a query
@@ -317,8 +328,18 @@ class Repo {
   }
 
 
+
   /**
-   * Retreive one item with controll
+   * Find documents that match query on given collection
+   *
+   * @return {Promise => Cursor}
+   */
+  _find(collection, query, projections = this.getHiddenProjectionObject()) {
+    return collection.find(query, projections);
+  }
+
+  /**
+   * Retreive one item on given collection
    * it's mongodDB ObjectID
    *
    * @param  {[type]} id [description]
@@ -331,7 +352,7 @@ class Repo {
 
 
   /**
-   * Insert with more control
+   * Insert with in given collection
    * @param  {MongoCollection} collection    Can specify a colleciton on which to insert the data
    * @param  {Object} data          [description]
    * @param  {Array} fieldsOveride  When specifiying a collection, the `fields` property of the repo might not be relevant, so it can be overiden here
@@ -362,7 +383,7 @@ class Repo {
   }
 
   /**
-   * Delete document that match the query
+   * Delete document that match the query in given collection
    *
    * @param  {MongoCollection} collection: Can specify a colleciton on which to insert the data
    * @param  {Object}  query: The mongoDB query
@@ -377,7 +398,7 @@ class Repo {
 
 
   /**
-   * Push data to array field with control over the collection
+   * Push data to array field in the given collection
    *
    * @param  {MongoCollection} collection: Can specify a colleciton on which to perform the opperation
    * @param  {Object}  query: The mongoDB query
