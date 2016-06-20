@@ -146,6 +146,7 @@ class Repo {
    * @return {Promise}
    */
   update(query, replace, updateTime = true, noGard) {
+    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
     return this._update(this.collection, query, replace, updateTime, noGard?[]:false );
   }
 
