@@ -13,7 +13,7 @@ const log = debug('kmc');
 const mongo = require("mongodb");
 
 // Notification for deprecated codebase
-if ( ! ${process.env.MONGO_CONNECTION_STRING} ) {
+if ( ! process.env.MONGO_CONNECTION_STRING ) {
   throw new Error('DB_PORT, DB_NAME, DB_HOST environment varialbes have been depreacted. Use MONGO_CONNECTION_STRING instread')
 }
 
