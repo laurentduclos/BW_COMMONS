@@ -12,9 +12,14 @@ import debug from 'debug';
 const log = debug('kmc');
 const mongo = require("mongodb");
 
+// Notification for deprecated codebase
+if ( ! ${process.env.MONGO_CONNECTION_STRING} ) {
+  throw new Error('DB_PORT, DB_NAME, DB_HOST environment varialbes have been depreacted. Use MONGO_CONNECTION_STRING instread')
+}
+
 // Get mongo access URL from environment variables
 const mongoUrl =
-  `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+  `mongodb://${process.env.MONGO_CONNECTION_STRING}`
 
 // Mongo configuration parameters
 const native_parser = true;
