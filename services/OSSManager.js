@@ -1,10 +1,16 @@
 import fs from 'fs';
 import co from 'co';
 import path from 'path';
-import {
-  Wrapper
-} from 'ali-oss';
+import { Wrapper } from 'ali-oss';
 const OSS = Wrapper;
+
+function UploadFileToOSSError(message = 'File upload failed') {
+  this.name = 'UploadFileToOSSError';
+  this.message = message;
+  this.stack = (new Error()).stack;
+}
+UploadFileToOSSError.prototype = Object.create(Error.prototype);
+UploadFileToOSSError.prototype.constructor = UploadFileToOSSError;
 
 let client = new OSS({
   accessKeyId: process.env.OSS_ACCESS_KEY_ID,
@@ -23,7 +29,9 @@ let client = new OSS({
  */
 export const upload = function(file, path = "") {
   return client.put(path, file).catch(function(err) {
-    console.log(`ERROR: ${err}`);
+    const OSSError = new UploadFileToOSSError(err.message);
+    OSSError.status = 500;
+    throw (OSSError);
   });
 };
 
@@ -36,7 +44,9 @@ export const upload = function(file, path = "") {
 export const deleteObject = function(path) {
   if (!path) throw new Error('No path was specified');
   return client.delete(path).catch(function(err) {
-    console.log(`ERROR: ${err}`);
+    const OSSError = new UploadFileToOSSError(err.message);
+    OSSError.status = 500;
+    throw (OSSError);
   });
 };
 
@@ -50,7 +60,9 @@ export const listDirectory = function(path) {
   return client.list({
     prefix: path
   }).catch(function(err) {
-    console.log(`ERROR: ${err}`);
+    const OSSError = new UploadFileToOSSError(err.message);
+    OSSError.status = 500;
+    throw (OSSError);
   });
 };
 
