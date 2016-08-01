@@ -147,6 +147,12 @@ class Repo {
    */
   update(query, replace, updateTime = true, noGard) {
     query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+
+    // If the _id field is present in the `replace` object make sure to remove it
+    if (replace._id) {
+      delete replace._id;
+      console.log('The _id field was removed from the `replace` object during update! Make sure no logic errors are in there..')
+    }
     return this._update(this.collection, query, replace, updateTime, noGard?[]:false );
   }
 
