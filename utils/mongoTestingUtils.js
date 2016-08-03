@@ -1,4 +1,4 @@
-import {mongoInit, mongoClose} from '../services/mongoDBConnector';
+import { mongoInit, mongoClose } from '../services/mongoDBConnector';
 import migrate from 'migrate';
 const set = migrate.load('migrations/.migrate-tests', 'migrations');
 
@@ -41,7 +41,7 @@ export  function setAndPrepareCollections(collections, cb) {
       return db.collection(collection).remove({});
     });
     Promise.all(deletes).then(function(err, res) {
-      cb()
+      cb(db)
     });
   });
 }
