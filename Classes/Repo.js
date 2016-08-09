@@ -146,7 +146,7 @@ class Repo {
    * @return {Promise}
    */
   update(query, replace, updateTime = true, noGard) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
 
     // If the _id field is present in the `replace` object make sure to remove it
     if (replace._id) {
@@ -164,7 +164,7 @@ class Repo {
    * @return {Promise}
    */
   unset(query, field) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
     replace = {
       $unser: { [field]: "" }
     }
@@ -182,7 +182,7 @@ class Repo {
    * @return {Promise}
    */
   fullUpdate(query, replace, updateTime = true) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
     replace = {
       replace,
       $currentDate: { updated_at: updateTime }
@@ -265,7 +265,7 @@ class Repo {
    * @return {Promise}
    */
   pullFromArray( query, removalQuery, fieldName ) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
     const data = {
       $pull: { [fieldName]: removalQuery },
       $currentDate: { updated_at: true }
@@ -416,7 +416,7 @@ class Repo {
    *
    */
   _pushToArray( collection, query, value, fieldName, updateTime = false) {
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
     const data = {
       $push: { [fieldName]: value },
       $currentDate: { updated_at: updateTime }
@@ -434,7 +434,7 @@ class Repo {
     // if (Object.keys(guarded).length === 0)
     //   return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
 
-    query = typeof query == 'object' ? query : {'_id': new ObjectID(query) };
+    query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
 
     updateTime && delete(replace.updated_at);
     replace = {
@@ -442,6 +442,10 @@ class Repo {
       $currentDate: { updated_at: updateTime }
     }
     return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
+  }
+
+  _isQueryObject( query ) {
+    typeof query === 'object' && ! query.hasOwnProperty('_bsontype')
   }
 }
 
