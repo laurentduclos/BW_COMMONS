@@ -421,6 +421,7 @@ class Repo {
       $push: { [fieldName]: value },
       $currentDate: { updated_at: updateTime }
     }
+    updateTime && delete(data.updated_at);
     return collection.findAndModify(query, [['_id',1]], data, {new:true});
   }
 
@@ -436,11 +437,12 @@ class Repo {
 
     query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
 
-    updateTime && delete(replace.updated_at);
     replace = {
       $set: replace,
       $currentDate: { updated_at: updateTime }
     }
+
+    updateTime && delete(replace.updated_at);
     return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
   }
 
