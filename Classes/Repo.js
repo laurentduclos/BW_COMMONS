@@ -308,7 +308,6 @@ class Repo {
 
     return indicative
       .validateAll(data, rules)
-      .then(() => { console.log('passed'); return true})
       .catch((errors) => {
         this.__errors = errors;
         const error = new ValidationError("notifications.validation_failed");
@@ -421,7 +420,6 @@ class Repo {
       $push: { [fieldName]: value },
       $currentDate: { updated_at: updateTime }
     }
-    updateTime && delete(data.updated_at);
     return collection.findAndModify(query, [['_id',1]], data, {new:true});
   }
 
@@ -436,18 +434,16 @@ class Repo {
     //   return Promise.reject(`Can not save resources, either ${this.constructor.name} repo was not specified a 'fields' property either no data was passed`);
 
     query = this._isQueryObject( query ) ? query : {'_id': new ObjectID(query) };
-
+    updateTime && delete(replace.updated_at);
     replace = {
       $set: replace,
       $currentDate: { updated_at: updateTime }
     }
-
-    updateTime && delete(replace.updated_at);
     return collection.findAndModify(query, [['_id',1]], replace, {upsert: true, new: true});
   }
 
   _isQueryObject( query ) {
-    typeof query === 'object' && ! query.hasOwnProperty('_bsontype')
+    return typeof query === 'object' && ! query.hasOwnProperty('_bsontype')
   }
 }
 
